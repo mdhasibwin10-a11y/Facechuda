@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Face Swap Studio</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
+    .container { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
+    .box { border: 2px dashed #38bdf8; padding: 20px; border-radius: 8px; width: 250px; }
+    input { margin-top: 10px; width: 100%; }
+    button { background: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #0369a1; }
+    img { max-width: 300px; margin-top: 20px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>AI Face Swap Web App</h1>
+  <div class="container">
+    <div class="box">
+      <h3>1. Face Image (Source)</h3>
+      <input type="file" id="sourceImg" accept="image/*">
+    </div>
+    <div class="box">
+      <h3>2. Target Image (Body)</h3>
+      <input type="file" id="targetImg" accept="image/*">
+    </div>
+  </div>
+  
+  <button onclick="runFaceSwap()">Swap Face Now</button>
+  
+  <div id="status"></div>
+  <div id="resultContainer"></div>
+
+  <script>
+    async function runFaceSwap() {
+      const sourceFile = document.getElementById('sourceImg').files[0];
+      const targetFile = document.getElementById('targetImg').files[0];
+      const statusDiv = document.getElementById('status');
+      const resultDiv = document.getElementById('resultContainer');
+
+      if (!sourceFile || !targetFile) {
+        alert('Please upload both source and target images.');
+        return;
+      }
+
+      statusDiv.innerText = "Processing AI face swap... Please wait...";
+      resultDiv.innerHTML = "";
+
+      // Convert images to Base64 data URLs
+      const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      const sourceBase64 = await toBase64(sourceFile);
+      const targetBase64 = await toBase64(targetFile);
+
+      try {
+        // Send request to serverless backend endpoint
+        const response = await fetch('/api/swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: sourceBase64, target: targetBase64 })
+        });
+        const data = await response.json();
+        
+        if (data.output) {
+          statusDiv.innerText = "Swap Complete!";
+          resultDiv.innerHTML = `<img src="${data.output}" alt="Face Swap Result">`;
+        } else {
+          statusDiv.innerText = "Error processing swap: " + (data.error || "Unknown error");
+        }
+      } catch (err) {
+        statusDiv.innerText = "Failed to connect to backend service.";
+      }
+    }
+  </script>
+</body>
+</html>
